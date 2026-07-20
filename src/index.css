@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --win-bg: rgba(32, 32, 32, 0.85);
+  --win-bg-alt: rgba(45, 45, 45, 0.9);
+  --win-border: rgba(255, 255, 255, 0.1);
+  --win-border-light: rgba(255, 255, 255, 0.2);
+  --win-accent: #0078D4;
+  --win-accent-hover: #106EBE;
+  --win-text: #ffffff;
+  --win-text-secondary: #b0b0b0;
+  --win-button-hover: rgba(255, 255, 255, 0.15);
+  --win-button-active: rgba(255, 255, 255, 0.25);
+  --taskbar-bg: rgba(0, 0, 0, 0.65);
+  --start-bg: rgba(32, 32, 32, 0.9);
+  --shadow-window: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='light'] {
+  --win-bg: rgba(255, 255, 255, 0.95);
+  --win-bg-alt: rgba(245, 245, 245, 0.98);
+  --win-border: rgba(0, 0, 0, 0.1);
+  --win-border-light: rgba(0, 0, 0, 0.15);
+  --win-accent: #0078D4;
+  --win-accent-hover: #106EBE;
+  --win-text: #1a1a1a;
+  --win-text-secondary: #666666;
+  --win-button-hover: rgba(0, 0, 0, 0.08);
+  --win-button-active: rgba(0, 0, 0, 0.12);
+  --taskbar-bg: rgba(255, 255, 255, 0.85);
+  --start-bg: rgba(255, 255, 255, 0.95);
+  --shadow-window: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+@layer base {
+  body {
+    @apply m-0 font-segoe antialiased;
+    color: var(--win-text);
+  }
+
+  #root {
+    @apply min-h-[100dvh];
+  }
+}
+
+@layer components {
+  .win-chrome-btn {
+    @apply flex h-8 w-10 items-center justify-center rounded text-sm text-[var(--win-text-secondary)] transition-colors hover:bg-black/5;
+  }
+
+  .win-chrome-btn-close:hover {
+    @apply bg-red-500 text-white;
+  }
+}
