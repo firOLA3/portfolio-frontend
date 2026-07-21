@@ -260,9 +260,22 @@ function Notepad() {
 
       <aside className="w-full md:w-[220px] border-b md:border-b-0 md:border-r p-4 overflow-x-auto md:overflow-y-auto backdrop-blur-xl flex flex-row md:flex-col shrink-0 items-center md:items-stretch gap-4 md:gap-0 no-scrollbar" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-bg)' }}>
         <div className="md:mb-4 flex items-center justify-between shrink-0 gap-4">
-          <h2 className="text-xs uppercase tracking-[0.24em]" style={{ color: 'var(--win-text-secondary)' }}>
-            Devlogs
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xs uppercase tracking-[0.24em]" style={{ color: 'var(--win-text-secondary)' }}>
+              Devlogs
+            </h2>
+            {notes.length > 1 && (
+              <motion.div
+                animate={{ x: [0, 5, 0], opacity: [0.5, 1, 0.5] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+                className="md:hidden flex items-center text-[10px] uppercase tracking-wider font-semibold"
+                style={{ color: 'var(--win-accent)' }}
+              >
+                Swipe 
+                <svg className="ml-1 w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+              </motion.div>
+            )}
+          </div>
           <button
             onClick={() => handleAction('new')}
             className="flex h-6 w-6 items-center justify-center rounded-full transition text-xs"
@@ -323,7 +336,7 @@ function Notepad() {
       </aside>
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between gap-4 border-b px-6 py-3 backdrop-blur-xl" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-button-hover)' }}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b px-4 sm:px-6 py-3 backdrop-blur-xl shrink-0" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-button-hover)' }}>
           <div className="flex items-center gap-3">
             <label className="text-xs uppercase tracking-[0.22em]" style={{ color: 'var(--win-text-secondary)' }}>
               Font Size:
@@ -340,7 +353,7 @@ function Notepad() {
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {isEditing ? (
               <>
                 <button

@@ -24,6 +24,7 @@ function Taskbar() {
   const activeWindowId = useWindowStore((s) => s.activeWindowId)
   const openWindow = useWindowStore((s) => s.openWindow)
   const minimizeWindow = useWindowStore((s) => s.minimizeWindow)
+  const minimizeAllWindows = useWindowStore((s) => s.minimizeAllWindows)
   const restoreWindow = useWindowStore((s) => s.restoreWindow)
   const focusWindow = useWindowStore((s) => s.focusWindow)
   const closeWindow = useWindowStore((s) => s.closeWindow)
@@ -178,7 +179,7 @@ function Taskbar() {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
               onClick={toggleStartMenu}
-              className="flex h-11 w-11 items-center justify-center rounded-2xl border text-lg transition max-[480px]:hidden"
+              className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl border text-lg transition max-[480px]:hidden"
               style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-button-hover)' }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--win-button-active)' }
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--win-button-hover)' }
@@ -186,15 +187,28 @@ function Taskbar() {
             >
               🪟
             </motion.button>
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={minimizeAllWindows}
+              className="flex md:hidden h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl border text-lg transition"
+              style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-button-hover)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--win-button-active)' }
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--win-button-hover)' }
+              aria-label="Show Desktop"
+            >
+              🏠
+            </motion.button>
           </div>
 
-          <div className="flex flex-1 items-center justify-center gap-2 overflow-x-auto px-2 mx-2 sm:px-4" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+          <div className="flex flex-1 items-center justify-start sm:justify-center gap-1 sm:gap-2 overflow-x-auto px-1 mx-1 sm:px-4 sm:mx-2" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
             {displayedApps.map((app) => {
               const windowItem = openApps[app.appId]
               const isOpen = Boolean(windowItem)
               const isActive = windowItem?.id === activeWindowId
               return (
-                <div key={app.appId} className={`relative group ${app.appId === 'terminal' ? 'max-[480px]:hidden' : ''}`}>
+                <div key={app.appId} className={`relative group shrink-0 ${app.appId === 'terminal' ? 'max-[480px]:hidden' : ''}`}>
                   <motion.button
                     type="button"
                     whileHover={{ scale: 1.12 }}
@@ -205,7 +219,7 @@ function Taskbar() {
                     onTouchStart={(e) => handleTouchStart(e, app.appId)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
-                    className={`flex h-11 w-11 items-center justify-center rounded-2xl border text-lg transition ${
+                    className={`flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl border text-lg transition ${
                       isActive ? 'ring-1' : ''
                     }`}
                     style={{

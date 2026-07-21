@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Spinner } from 'flowbite-react'
 import { useNotifStore } from '../../../store/useNotifStore'
@@ -36,6 +36,8 @@ function Contact() {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState(null)
+  const [showWelcomePreview, setShowWelcomePreview] = useState(true)
+  const [previewSlideRight, setPreviewSlideRight] = useState(false)
 
   const addNotification = useNotifStore((s) => s.addNotification)
 
@@ -44,6 +46,16 @@ function Contact() {
     setFormData((prev) => ({ ...prev, [name]: value }))
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }))
+    }
+  }
+
+  const handleInteraction = () => {
+    setCurrentView('welcome')
+    if (!previewSlideRight) {
+      setPreviewSlideRight(true)
+      setTimeout(() => {
+        setShowWelcomePreview(false)
+      }, 4000)
     }
   }
 
@@ -133,41 +145,53 @@ function Contact() {
         <button
           type="button"
           onClick={() => setCurrentView('compose')}
-          className="shrink-0 w-auto md:w-full rounded-3xl bg-win-accent px-4 py-2 md:py-3 text-sm font-medium text-white transition hover:bg-win-accent/90"
+          className="shrink-0 rounded-full md:rounded-3xl bg-win-accent h-10 w-10 md:h-auto md:w-full md:px-4 md:py-3 text-sm font-medium text-white transition hover:bg-win-accent/90 flex items-center justify-center"
         >
-          ✏️ Compose
+          ✏️<span className="hidden md:inline ml-2">Compose</span>
         </button>
       </aside>
 
-      <div className="w-full md:w-[220px] border-b md:border-b-0 md:border-r overflow-x-auto md:overflow-y-auto flex flex-row md:flex-col shrink-0 backdrop-blur-xl no-scrollbar" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-bg)' }}>
-        <div
-          onClick={() => setCurrentView('welcome')}
-          className="w-[200px] md:w-full shrink-0 p-4 border-r md:border-r-0 md:border-b cursor-pointer transition"
-          style={{
-            borderColor: currentView === 'welcome' ? 'var(--win-accent)' : 'var(--win-border)',
-            backgroundColor: currentView === 'welcome' ? 'var(--win-button-hover)' : 'transparent',
-          }}
-        >
-          <div className="text-sm font-medium truncate" style={{ color: 'var(--win-text)' }}>
-            {WELCOME_MESSAGE.subject}
-          </div>
-          <div className="text-xs truncate mt-1" style={{ color: 'var(--win-text-secondary)' }}>
-            {WELCOME_MESSAGE.preview}
-          </div>
-          <div className="text-xs mt-2" style={{ color: 'var(--win-text-secondary)', opacity: 0.6 }}>{WELCOME_MESSAGE.date}</div>
-        </div>
-      </div>
+      <AnimatePresence>
+        {showWelcomePreview && (
+          <motion.div
+            initial={false}
+            animate={{ x: previewSlideRight ? 20 : 0 }}
+            exit={{ opacity: 0, x: -100, width: 0, height: 0, overflow: 'hidden' }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="w-full md:w-[220px] border-b md:border-b-0 md:border-r overflow-x-auto md:overflow-y-auto flex flex-row md:flex-col shrink-0 backdrop-blur-xl no-scrollbar" 
+            style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-bg)' }}
+          >
+            <div
+              onClick={handleInteraction}
+              className="w-[200px] md:w-full shrink-0 p-4 border-r md:border-r-0 md:border-b cursor-pointer transition"
+              style={{
+                borderColor: currentView === 'welcome' ? 'var(--win-accent)' : 'var(--win-border)',
+                backgroundColor: currentView === 'welcome' ? 'var(--win-button-hover)' : 'transparent',
+              }}
+            >
+              <div className="text-sm font-medium truncate" style={{ color: 'var(--win-text)' }}>
+                {WELCOME_MESSAGE.subject}
+              </div>
+              <div className="text-xs truncate mt-1" style={{ color: 'var(--win-text-secondary)' }}>
+                {WELCOME_MESSAGE.preview}
+              </div>
+              <div className="text-xs mt-2" style={{ color: 'var(--win-text-secondary)', opacity: 0.6 }}>{WELCOME_MESSAGE.date}</div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <main className="flex-1 overflow-auto p-6">
+      <main className="flex-1 overflow-auto p-6 pb-24">
         <AnimatePresence mode="wait">
           {currentView === 'welcome' ? (
             <motion.div
               key="welcome"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.25 }}
-              className="space-y-4"
+              className="space-y-4 cursor-default"
+              onClick={handleInteraction}
             >
               <div className="space-y-2 rounded-3xl border p-6" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-button-hover)' }}>
                 <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--win-border)' }}>

@@ -112,6 +112,13 @@ export const useWindowStore = create((set, get) => ({
     }))
   },
 
+  minimizeAllWindows: () => {
+    set((state) => ({
+      windows: state.windows.map((w) => ({ ...w, isMinimized: true })),
+      activeWindowId: null,
+    }))
+  },
+
   maximizeWindow: (id, snapLayout = 'full') => {
     const { position, size } = getSnapBounds(snapLayout)
 
