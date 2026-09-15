@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 const TASKBAR_HEIGHT = 48
 const DEFAULT_SIZE = { w: 720, h: 480 }
@@ -50,8 +51,10 @@ function getMaxZIndex(windows) {
   return windows.reduce((max, w) => Math.max(max, w.zIndex), 0)
 }
 
-export const useWindowStore = create((set, get) => ({
-  windows: [],
+export const useWindowStore = create(
+  persist(
+    (set, get) => ({
+      windows: [],
   activeWindowId: null,
 
   openWindow: (appId, title) => {
@@ -213,4 +216,9 @@ export const useWindowStore = create((set, get) => ({
       }),
     }))
   },
-}))
+}),
+{
+  name: 'os-window-storage',
+  storage: createJSONStorage(() => sessionStorage),
+}
+))

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useWindowStore } from '../../store/useWindowStore'
 import { useOSStore } from '../../store/useOSStore'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useNavigate } from 'react-router-dom'
 import desktopWallpaper from '../../assets/FIROLA GREEN.png'
 import WindowManager from './WindowManager'
 import ContextMenu from './ContextMenu'
@@ -20,12 +21,15 @@ const DESKTOP_ICONS = [
 ]
 
 function Desktop() {
+  const navigate = useNavigate()
   const openWindow = useWindowStore((s) => s.openWindow)
   const activeWindowId = useWindowStore((s) => s.activeWindowId)
   const closeWindow = useWindowStore((s) => s.closeWindow)
   const wallpaper = useOSStore((s) => s.wallpaper)
   const [contextMenu, setContextMenu] = useState({ open: false, x: 0, y: 0, type: null })
   const [windowSwitcherOpen, setWindowSwitcherOpen] = useState(false)
+  const [selectedIconId, setSelectedIconId] = useState(null)
+  const lastClickRef = useRef({ id: null, time: 0 })
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
   const [iconOffsets, setIconOffsets] = useState(
     () =>
@@ -45,6 +49,9 @@ function Desktop() {
     (event, iconId, iconLabel) => {
       if (event.button !== 0) return
       event.preventDefault()
+      event.stopPropagation()
+      
+      setSelectedIconId(iconId)
 
       const startOffset = iconOffsets[iconId] || { x: 0, y: 0 }
       let hasDragged = false
@@ -90,7 +97,15 @@ function Desktop() {
         }
 
         if (!hasDragged) {
-          openWindow(iconId, iconLabel)
+          const now = Date.now()
+          const isDoubleClick = lastClickRef.current.id === iconId && now - lastClickRef.current.time < 500
+          if (isDoubleClick) {
+            navigate(`/app/${iconId}`, { state: { label: iconLabel } })
+            setSelectedIconId(null)
+            lastClickRef.current = { id: null, time: 0 }
+          } else {
+            lastClickRef.current = { id: iconId, time: now }
+          }
         }
 
         dragRef.current = null
@@ -232,13 +247,18 @@ function Desktop() {
         backgroundPosition: 'center',
       }}
       onContextMenu={handleDesktopContextMenu}
+      onPointerDown={() => setSelectedIconId(null)}
     >
       <div className="relative z-10 px-6 py-8 h-full flex justify-between pointer-events-none">
         <div className="grid max-w-xs grid-cols-2 gap-4 h-fit pointer-events-auto">
           {DESKTOP_ICONS.map((icon) => (
             <div
               key={icon.id}
-              className="desktop-icon group w-28 cursor-grab select-none rounded-3xl border border-white/10 bg-white/10 p-3 text-white shadow-[0_10px_60px_rgba(0,0,0,0.15)] transition hover:border-white/20 hover:bg-white/15"
+              className={`desktop-icon group w-28 cursor-grab select-none rounded-3xl border p-3 shadow-[0_10px_60px_rgba(0,0,0,0.15)] transition ${
+                selectedIconId === icon.id
+                  ? 'border-white/30 bg-white/25'
+                  : 'border-white/10 bg-white/10 hover:border-white/20 hover:bg-white/15'
+              }`}
               onContextMenu={(event) => handleIconContextMenu(event, icon.id)}
               onPointerDown={(event) => handleIconPointerDown(event, icon.id, icon.label)}
               style={{

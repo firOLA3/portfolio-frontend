@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Tooltip } from 'flowbite-react'
 import { useOSStore } from '../../store/useOSStore'
 import { useWindowStore } from '../../store/useWindowStore'
+import { useNavigate } from 'react-router-dom'
 
 const APPS = [
   { appId: 'about', label: 'About Me', icon: '👤' },
@@ -22,6 +23,7 @@ const RECOMMENDED = [
 ]
 
 function StartMenu() {
+  const navigate = useNavigate()
   const isOpen = useOSStore((s) => s.isStartMenuOpen)
   const closeStartMenu = useOSStore((s) => s.closeStartMenu)
   const toggleStartMenu = useOSStore((s) => s.toggleStartMenu)
@@ -82,20 +84,7 @@ function StartMenu() {
   }, [normalizedSearch, showAllApps])
 
   const handleAppClick = (app) => {
-    const appWindow = openApps[app.appId]
-
-    if (!appWindow) {
-      openWindow(app.appId, app.label)
-    } else if (appWindow.isMinimized) {
-      restoreWindow(appWindow.id)
-    } else if (appWindow.id === windows.find((w) => w.id === appWindow.id)?.id) {
-      if (appWindow.id === useWindowStore.getState().activeWindowId) {
-        minimizeWindow(appWindow.id)
-      } else {
-        focusWindow(appWindow.id)
-      }
-    }
-
+    navigate(`/app/${app.appId}`, { state: { label: app.label } })
     closeStartMenu()
     setShowAllApps(false)
   }

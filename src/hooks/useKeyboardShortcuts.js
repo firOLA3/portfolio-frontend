@@ -162,5 +162,4 @@ export const useKeyboardShortcuts = (onAltTab, onEscape) => {
     onEscape,
   ])
 
-  return { altPressed: altPressed.current }
 }

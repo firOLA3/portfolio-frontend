@@ -5,6 +5,7 @@ import { useOSStore } from '../../store/useOSStore'
 import { useWindowStore } from '../../store/useWindowStore'
 import { useNotifStore } from '../../store/useNotifStore'
 import { soundService } from '../../services/soundService'
+import { useNavigate } from 'react-router-dom'
 import Clock from './Clock'
 import NotificationCenter from './NotificationCenter'
 import StartMenu from './StartMenu'
@@ -20,6 +21,7 @@ const TASKBAR_APPS = [
 ]
 
 function Taskbar() {
+  const navigate = useNavigate()
   const windows = useWindowStore((s) => s.windows)
   const activeWindowId = useWindowStore((s) => s.activeWindowId)
   const openWindow = useWindowStore((s) => s.openWindow)
@@ -38,6 +40,7 @@ function Taskbar() {
 
   const [pinnedApps, setPinnedApps] = useState(() => TASKBAR_APPS.map((app) => app.appId))
   const [contextMenu, setContextMenu] = useState(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const menuRef = useRef(null)
   const touchTimer = useRef(null)
 
@@ -60,6 +63,20 @@ function Taskbar() {
       window.removeEventListener('keydown', handleEscape)
     }
   }, [contextMenu])
+
+  useEffect(() => {
+    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => console.log(err))
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen().catch((err) => console.log(err))
+    }
+  }
 
   useEffect(() => {
     const handleGlobalWin = (event) => {
@@ -91,21 +108,8 @@ function Taskbar() {
     const windowItem = openApps[appId]
     if (!windowItem) {
       soundService.play('popopen')
-      openWindow(appId, label)
-      return
     }
-
-    if (windowItem.isMinimized) {
-      restoreWindow(windowItem.id)
-      return
-    }
-
-    if (windowItem.id === activeWindowId) {
-      minimizeWindow(windowItem.id)
-      return
-    }
-
-    focusWindow(windowItem.id)
+    navigate(`/app/${appId}`, { state: { label: label } })
   }
 
   const handleAppContext = (event, appId) => {
@@ -119,12 +123,11 @@ function Taskbar() {
     const windowItem = openApps[appId]
 
     if (action === 'open') {
-      if (windowItem?.isMinimized) {
-        restoreWindow(windowItem.id)
-      } else {
-        const appEntry = TASKBAR_APPS.find((app) => app.appId === appId)
-        openWindow(appId, appEntry?.label ?? appId)
+      if (!windowItem) {
+        soundService.play('popopen')
       }
+      const label = windowItem?.title ?? TASKBAR_APPS.find((app) => app.appId === appId)?.label ?? appId
+      navigate(`/app/${appId}`, { state: { label: label } })
     }
 
     if (action === 'close' && windowItem) {
@@ -232,18 +235,18 @@ function Taskbar() {
                   >
                     {app.icon}
                   </motion.button>
-                  <span 
-                    className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs shadow-sm opacity-0 transition-opacity duration-200 group-hover:opacity-100" 
-                    style={{ 
-                      backgroundColor: 'var(--win-bg)', 
-                      color: 'var(--win-text)', 
-                      borderColor: 'var(--win-border)' 
+                  <span
+                    className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs shadow-sm opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                    style={{
+                      backgroundColor: 'var(--win-bg)',
+                      color: 'var(--win-text)',
+                      borderColor: 'var(--win-border)'
                     }}
                   >
                     {app.label}
                   </span>
                   {isOpen ? (
-                    <motion.span 
+                    <motion.span
                       initial={{ scaleX: 0 }}
                       animate={{ scaleX: 1 }}
                       className="absolute -bottom-1 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full"
@@ -271,6 +274,23 @@ function Taskbar() {
               aria-label="Toggle theme"
             >
               {theme === 'light' ? '☀️' : '🌙'}
+            </motion.button>
+
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleFullscreen}
+              className={`flex h-10 w-10 items-center justify-center rounded-2xl border text-lg transition max-[480px]:hidden ${!isFullscreen ? 'animate-pulse' : ''}`}
+              style={{
+                borderColor: 'var(--win-border)',
+                backgroundColor: 'var(--win-button-hover)',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--win-button-active)' }
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--win-button-hover)' }
+              aria-label="Toggle Fullscreen"
+            >
+              {isFullscreen ? '↙️' : '⛶'}
             </motion.button>
 
             <div className="hidden items-center gap-2 md:flex">
@@ -319,10 +339,10 @@ function Taskbar() {
         <div
           ref={menuRef}
           className="fixed z-50 rounded-3xl border bg-[var(--win-bg)] p-2 shadow-2xl backdrop-blur-xl"
-          style={{ 
-            left: Math.min(contextMenu.x, typeof window !== 'undefined' ? window.innerWidth - 180 : contextMenu.x), 
-            top: contextMenu.y, 
-            borderColor: 'var(--win-border)' 
+          style={{
+            left: Math.min(contextMenu.x, typeof window !== 'undefined' ? window.innerWidth - 180 : contextMenu.x),
+            top: contextMenu.y,
+            borderColor: 'var(--win-border)'
           }}
         >
           <button
