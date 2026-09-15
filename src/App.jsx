@@ -46,7 +46,8 @@ function App() {
         isUpdatingFromUrl.current = false
         return
       }
-      const appId = state.activeWindowId
+      const activeWindow = state.windows.find(w => w.id === state.activeWindowId)
+      const appId = activeWindow?.appId
       try {
         isUpdatingFromUrl.current = true
         if (appId) {
