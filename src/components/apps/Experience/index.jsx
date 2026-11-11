@@ -5,54 +5,57 @@ import { Badge } from 'flowbite-react'
 const EXPERIENCES = [
   {
     id: 'exp-1',
-    company: 'Tech Startup Co',
-    role: 'Full-Stack Developer',
+    company: 'John Ethel Schools',
+    role: 'Media Personnel',
     type: 'work',
     icon: '💼',
-    startDate: '2023-06',
-    endDate: '2024-12',
-    location: 'Remote',
+    startDate: 'Aug 2026',
+    endDate: 'Oct 2026',
+    location: 'Ogbomoso, Oyo State',
     responsibilities: [
-      'Built React-based dashboard for real-time data analytics with 10k+ concurrent users',
-      'Developed Node.js/Express backend APIs handling 5M+ requests/day',
-      'Implemented MongoDB optimization reducing query time by 60%',
-      'Led frontend migration from Vue to React, improving performance by 40%',
-      'Mentored 3 junior developers on best practices and code quality',
+      'Designed and deployed a user-management ecosystem including a school portal, learning management system, school database, and employee management system.',
+      "Directed printing and publishing of the school's complete-edition manuals, managing content, layout, and production timelines.",
     ],
-    technologies: ['React', 'Node.js', 'MongoDB', 'PostgreSQL', 'Docker', 'AWS'],
+    technologies: ['MERN Stack', 'Next.js', 'Content & Layout', 'Publishing'],
   },
   {
     id: 'exp-2',
-    company: 'Digital Agency XYZ',
-    role: 'Frontend Developer',
+    company: 'SQI College of ICT',
+    role: 'Junior Developer (Student Internship)',
     type: 'work',
-    icon: '🎨',
-    startDate: '2022-01',
-    endDate: '2023-05',
-    location: 'Hybrid — Lagos',
+    icon: '💻',
+    startDate: 'Apr 2025',
+    endDate: 'Sept 2025',
+    location: 'Ogbomoso, Oyo State',
     responsibilities: [
-      'Developed 15+ client websites using React, Tailwind CSS, and Next.js',
-      'Improved page load time by 45% through code splitting and image optimization',
-      'Designed and implemented responsive UI components for reusable component library',
-      'Collaborated with designers to translate Figma mockups into pixel-perfect interfaces',
+      'Contributed code and technical support to college digital initiatives while assisting instructors with full-stack development coursework.',
+      'Served on the Protocol Team and led college publicity and awareness campaigns as a volunteer, coordinating institutional event logistics.',
     ],
-    technologies: ['React', 'Next.js', 'Tailwind CSS', 'TypeScript', 'Figma'],
+    technologies: ['Full-Stack Development', 'Technical Support', 'Course Assistance', 'Event Coordination'],
   },
   {
     id: 'edu-1',
-    company: 'University of Lagos',
-    role: 'B.Sc Computer Science',
+    company: 'Ladoke Akintola University of Technology (LAUTECH)',
+    role: 'Bachelor of Technology, Computer Science',
     type: 'education',
     icon: '🎓',
-    startDate: '2018-09',
-    endDate: '2022-06',
-    location: 'Lagos, Nigeria',
-    responsibilities: [
-      'GPA: 3.8/4.0',
-      'Relevant coursework: Data Structures, Algorithms, Web Development, Database Design',
-      'Senior capstone project: E-learning platform with real-time collaboration (React + Node.js)',
-    ],
-    technologies: ['Java', 'Python', 'C++', 'SQL', 'Web Technologies'],
+    startDate: 'Jan 2022',
+    endDate: 'July 2026',
+    location: 'Ogbomoso, Oyo State',
+    responsibilities: ['Bachelor of Technology degree in Computer Science.'],
+    technologies: ['Computer Science'],
+  },
+  {
+    id: 'edu-2',
+    company: 'SQI College of ICT',
+    role: 'Professional Diploma, Full Stack Software Development',
+    type: 'education',
+    icon: '🎓',
+    startDate: '2025',
+    endDate: '2026',
+    location: 'Ogbomoso, Oyo State',
+    responsibilities: ['Professional Diploma in Full Stack Software Development.'],
+    technologies: ['Full Stack Software Development'],
   },
 ]
 
@@ -196,7 +199,7 @@ function Experience() {
 
               <div className="border-t pt-6" style={{ borderColor: 'var(--win-border)' }}>
                 <h2 className="mb-4 text-sm uppercase tracking-[0.22em]" style={{ color: 'var(--win-text-secondary)' }}>
-                  Technologies
+                  {selected.type === 'work' ? 'Skills & Tools' : 'Qualification'}
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {selected.technologies.map((tech) => (

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import profileImage from '../../assets/20261013_101512.jpg'
 
 const SECTIONS = [
   { id: 'system', label: '🖥️ System' },
@@ -40,9 +41,12 @@ function About({ title }) {
     <div className="flex flex-col md:flex-row h-full min-h-0 overflow-hidden rounded-b-win-lg bg-[var(--win-bg)] text-[var(--win-text)]">
       <aside className="w-full md:w-[220px] border-b md:border-b-0 md:border-r p-4 md:p-6 backdrop-blur-xl shrink-0 flex flex-row md:flex-col overflow-x-auto no-scrollbar gap-6 items-center md:items-stretch" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-bg)' }}>
         <div className="flex flex-row md:flex-col items-center gap-3 md:pb-6 text-left md:text-center shrink-0">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full border text-3xl" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-button-hover)', color: 'var(--win-text)' }}>
-            Y
-          </div>
+          <img
+            src={profileImage}
+            alt={`${PROFILE.name} profile`}
+            className="h-16 w-16 shrink-0 rounded-full border object-cover"
+            style={{ borderColor: 'var(--win-border)', objectPosition: 'center 45%' }}
+          />
           <div>
             <p className="text-sm uppercase tracking-[0.24em]" style={{ color: 'var(--win-text-secondary)' }}>{title}</p>
             <p className="text-lg font-semibold" style={{ color: 'var(--win-text)' }}>{PROFILE.name}</p>
