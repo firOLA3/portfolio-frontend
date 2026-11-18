@@ -1,16 +1,27 @@
-# React + Vite
+# OS11 Portfolio
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Deploy to Vercel
 
-Currently, two official plugins are available:
+1. Import this repository into Vercel and set **Root Directory** to `os11`.
+2. Use the Vite defaults:
+   - Build command: `npm run build`
+   - Output directory: `dist`
+   - Install command: `npm install`
+3. Add this environment variable in the Vercel project's **Settings → Environment Variables**:
+   - `VITE_API_BASE_URL` = `https://portfolio-backend-t1f3.onrender.com`
+4. Deploy (or redeploy) the project.
+5. In Render, set the backend's `CLIENT_URL` environment variable to the Vercel production origin, for example `https://your-project.vercel.app`, then redeploy/restart the backend. Use the origin only, without a path or trailing slash.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The Vercel rewrite in `vercel.json` sends app routes back to `index.html`, so React Router routes work on direct visits and page refreshes.
 
-## React Compiler
+`VITE_API_BASE_URL` is included in the public frontend bundle. Use it only for the public API origin; never put secrets in `VITE_*` variables.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Local development
 
-## Expanding the ESLint configuration
+Run `npm install` and then `npm run dev`. The Vite development server proxies `/api` requests to `http://localhost:5000`; set `VITE_API_BASE_URL` locally only if you want to call a different backend.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Other commands
+
+- `npm run build` - Build the production site into `dist`.
+- `npm run lint` - Run ESLint.
+- `npm run preview` - Preview the production build locally.
