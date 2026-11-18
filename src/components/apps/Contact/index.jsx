@@ -1,8 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Spinner } from 'flowbite-react'
-import { useNotifStore } from '../../../store/useNotifStore'
-import { api } from '../../../services/index'
 
 const WELCOME_MESSAGE = {
   id: 'welcome',
@@ -34,16 +31,14 @@ function Contact() {
     message: '',
   })
   const [errors, setErrors] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [submitError, setSubmitError] = useState(null)
+  const [submitNotice, setSubmitNotice] = useState(null)
   const [showWelcomePreview, setShowWelcomePreview] = useState(true)
   const [previewSlideRight, setPreviewSlideRight] = useState(false)
-
-  const addNotification = useNotifStore((s) => s.addNotification)
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    setSubmitNotice(null)
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }))
     }
@@ -74,7 +69,7 @@ function Contact() {
     return newErrors
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault()
     const newErrors = validateForm()
     if (Object.keys(newErrors).length > 0) {
@@ -82,28 +77,9 @@ function Contact() {
       return
     }
 
-    setLoading(true)
-    setSubmitError(null)
-
-    try {
-      const response = await api.post('/api/contact', formData)
-      if (response.data.success) {
-        addNotification({
-          id: `notif-${Date.now()}`,
-          message: response.data.message,
-          icon: '✉️',
-          read: false,
-        })
-        setFormData({ name: '', email: '', subject: '', message: '' })
-        setCurrentView('welcome')
-      }
-    } catch (err) {
-      setSubmitError(
-        err.response?.data?.message || 'Failed to send message. Please try again.'
-      )
-    } finally {
-      setLoading(false)
-    }
+    setSubmitNotice(
+      'Contact messaging is still in development; your message was not sent.'
+    )
   }
 
   return (
@@ -304,24 +280,26 @@ function Contact() {
                 )}
               </div>
 
-              {submitError && (
-                <div className="rounded-3xl border p-4 text-sm text-red-300" style={{ borderColor: 'var(--win-border)', backgroundColor: 'rgba(255,0,0,0.1)' }}>
-                  {submitError}
+              {submitNotice && (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="rounded-3xl border p-4 text-sm"
+                  style={{
+                    borderColor: 'var(--win-border)',
+                    backgroundColor: 'var(--win-button-hover)',
+                    color: 'var(--win-text)',
+                  }}
+                >
+                  {submitNotice}
                 </div>
               )}
 
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full rounded-3xl bg-win-accent px-6 py-3 font-medium text-white transition hover:bg-win-accent/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full rounded-3xl bg-win-accent px-6 py-3 font-medium text-white transition hover:bg-win-accent/90"
               >
-                {loading ? (
-                  <>
-                    <Spinner size="sm" color="light" /> Sending...
-                  </>
-                ) : (
-                  'Send Message'
-                )}
+                Send Message
               </button>
             </motion.form>
           )}
