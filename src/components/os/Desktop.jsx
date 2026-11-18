@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useWindowStore } from '../../store/useWindowStore'
 import { useOSStore } from '../../store/useOSStore'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import desktopWallpaper from '../../assets/FIROLA GREEN.png'
 import WindowManager from './WindowManager'
 import ContextMenu from './ContextMenu'
@@ -21,6 +21,7 @@ const DESKTOP_ICONS = [
 ]
 
 function Desktop() {
+  const location = useLocation()
   const navigate = useNavigate()
   const openWindow = useWindowStore((s) => s.openWindow)
   const activeWindowId = useWindowStore((s) => s.activeWindowId)
@@ -153,7 +154,14 @@ function Desktop() {
   useEffect(() => {
     if (!isMobile) return
 
-    const handlePopState = (event) => {
+    const handlePopState = () => {
+      if (
+        location.pathname.startsWith('/app/projects/') ||
+        window.location.pathname.startsWith('/app/projects/')
+      ) {
+        return
+      }
+
       const topWin = useWindowStore.getState().activeWindowId
       if (topWin) {
         useWindowStore.getState().closeWindow(topWin)
@@ -162,7 +170,7 @@ function Desktop() {
 
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [isMobile])
+  }, [isMobile, location.pathname])
 
   const wallpaperClass = {
     bloom: 'bg-gradient-to-br from-indigo-950 via-slate-950 to-slate-900',

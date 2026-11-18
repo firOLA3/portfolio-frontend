@@ -220,5 +220,37 @@ export const useWindowStore = create(
 {
   name: 'os-window-storage',
   storage: createJSONStorage(() => sessionStorage),
+  version: 1,
+  migrate: (persistedState) => {
+    const state = persistedState && typeof persistedState === 'object'
+      ? persistedState
+      : {}
+    const windows = Array.isArray(state.windows) ? state.windows : []
+    const validWindows = windows.filter(
+      (windowItem) =>
+        windowItem &&
+        typeof windowItem === 'object' &&
+        (typeof windowItem.appId !== 'string' ||
+          !windowItem.appId.startsWith('projects/')),
+    )
+    const activeWindow = validWindows.find(
+      (windowItem) =>
+        windowItem.id === state.activeWindowId && !windowItem.isMinimized,
+    )
+    const fallbackWindow = validWindows.reduce(
+      (current, windowItem) =>
+        !windowItem.isMinimized &&
+        (!current || windowItem.zIndex > current.zIndex)
+          ? windowItem
+          : current,
+      null,
+    )
+
+    return {
+      ...state,
+      windows: validWindows,
+      activeWindowId: (activeWindow ?? fallbackWindow)?.id ?? null,
+    }
+  },
 }
 ))

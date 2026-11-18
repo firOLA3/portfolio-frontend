@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Badge, Spinner } from 'flowbite-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { getProjects, getProject, createProject, updateProject, deleteProject } from '../../../services/projectService'
 
 const CATEGORIES = [
@@ -72,16 +73,22 @@ const sortProjects = (projects, column, direction) => {
 }
 
 function Projects() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const projectId = location.pathname.match(/^\/app\/projects\/([^/]+)\/?$/)?.[1] ?? null
   const [projects, setProjects] = useState([])
   const [activeCategory, setActiveCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState(VIEW_MODES.grid)
-  const [selectedId, setSelectedId] = useState(null)
   const [sortColumn, setSortColumn] = useState('name')
   const [sortDirection, setSortDirection] = useState('asc')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [detailProject, setDetailProject] = useState(null)
+  const [projectLoadResult, setProjectLoadResult] = useState(null)
+  const [detailRetryCount, setDetailRetryCount] = useState(0)
+  const detailProject = projectLoadResult?.id === projectId ? projectLoadResult.project : null
+  const detailError = projectLoadResult?.id === projectId ? projectLoadResult.error : null
+  const detailLoading = Boolean(projectId && projectLoadResult?.id !== projectId)
 
   // Admin CRUD State
   const [showPasscodeModal, setShowPasscodeModal] = useState(false)
@@ -110,19 +117,43 @@ function Projects() {
     try {
       const data = await getProjects({ category: activeCategory })
       setProjects(data)
-      if (!selectedId && data.length > 0) {
-        setSelectedId(data[0].id)
-      }
     } catch (err) {
       setError('Could not load projects. Check your connection.')
     } finally {
       setLoading(false)
     }
-  }, [activeCategory, selectedId])
+  }, [activeCategory])
 
   useEffect(() => {
     fetchProjects()
   }, [fetchProjects])
+
+  useEffect(() => {
+    if (!projectId) return undefined
+
+    let active = true
+    getProject(projectId)
+      .then((project) => {
+        if (active) {
+          setProjectLoadResult({ id: projectId, project, error: null })
+        }
+      })
+      .catch((requestError) => {
+        if (active) {
+          setProjectLoadResult({
+            id: projectId,
+            project: null,
+            error: requestError.response?.status === 404
+              ? 'Project not found.'
+              : 'Could not load this project. Check your connection.',
+          })
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [projectId, detailRetryCount])
 
   const visibleProjects = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -136,55 +167,10 @@ function Projects() {
     )
   }, [projects, searchQuery, sortColumn, sortDirection])
 
-  const selectedProject = useMemo(
-    () => visibleProjects.find((project) => project.id === selectedId) ?? null,
-    [visibleProjects, selectedId],
-  )
-
-  useEffect(() => {
-    if (!selectedProject && visibleProjects.length > 0) {
-      setSelectedId(visibleProjects[0].id)
-    }
-
-    if (!selectedProject) {
-      setDetailProject(null)
-    }
-  }, [selectedProject, visibleProjects])
-
-  useEffect(() => {
-    if (!selectedId) {
-      setDetailProject(null)
-      return
-    }
-
-    const found = projects.find((project) => project.id === selectedId)
-    if (found) {
-      setDetailProject(found)
-      return
-    }
-
-    let mounted = true
-    getProject(selectedId)
-      .then((project) => {
-        if (mounted) {
-          setDetailProject(project)
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setDetailProject(null)
-        }
-      })
-
-    return () => {
-      mounted = false
-    }
-  }, [selectedId, projects])
-
   const handleCategoryClick = useCallback((key) => {
     setActiveCategory(key)
-    setSelectedId(null)
-  }, [])
+    navigate('/app/projects')
+  }, [navigate])
 
   const handleSortClick = useCallback(
     (column) => {
@@ -198,14 +184,9 @@ function Projects() {
     [sortColumn],
   )
 
-  const handleSelectProject = useCallback((project) => {
-    setSelectedId(project.id)
-  }, [])
-
   const handleOpenDetail = useCallback((project) => {
-    setSelectedId(project.id)
-    setDetailProject(project)
-  }, [])
+    navigate(`/app/projects/${encodeURIComponent(project.id)}`)
+  }, [navigate])
 
   // Admin Handlers
   const handleAction = (action) => {
@@ -249,12 +230,12 @@ function Projects() {
       if (pendingAction === 'new') {
         const newProj = await createProject(payload, passcodeInput)
         setProjects(prev => [newProj, ...prev])
-        setSelectedId(newProj.id)
-        setDetailProject(newProj)
+        setProjectLoadResult({ id: newProj.id, project: newProj, error: null })
+        navigate(`/app/projects/${encodeURIComponent(newProj.id)}`)
       } else if (pendingAction === 'edit') {
         const updated = await updateProject(detailProject.id, payload, passcodeInput)
         setProjects(prev => prev.map(p => p.id === updated.id ? updated : p))
-        setDetailProject(updated)
+        setProjectLoadResult({ id: updated.id, project: updated, error: null })
       }
       setShowProjectModal(false)
     } catch (err) {
@@ -266,21 +247,19 @@ function Projects() {
 
   const confirmDelete = async () => {
     if (!detailProject) return
+    const deletedProjectId = detailProject.id
     setIsSubmitting(true)
     try {
-      await deleteProject(detailProject.id, passcodeInput)
-      setProjects(prev => prev.filter(p => p.id !== detailProject.id))
-      setSelectedId(null)
-      setDetailProject(null)
+      await deleteProject(deletedProjectId, passcodeInput)
+      setProjects(prev => prev.filter(p => p.id !== deletedProjectId))
       setShowDeleteModal(false)
+      navigate('/app/projects')
     } catch (err) {
       alert(err.response?.data?.message || 'Delete failed. Wrong passcode?')
     } finally {
       setIsSubmitting(false)
     }
   }
-
-  const selectedCount = selectedProject ? 1 : 0
 
   return (
     <div className="flex h-full min-h-0 flex-col relative" style={{ color: 'var(--win-text)', backgroundColor: 'var(--win-bg)' }}>
@@ -426,11 +405,11 @@ function Projects() {
             }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--win-button-active)'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--win-bg)'}
-            onClick={() => window.history.back()}
+            onClick={() => projectId ? navigate('/app/projects') : window.history.back()}
           >
             ←
           </button>
-          <button
+          {!projectId && <button
             type="button"
             className="rounded-2xl border px-3 py-2 text-xs font-medium transition"
             style={{
@@ -443,13 +422,13 @@ function Projects() {
             onClick={() => window.history.forward()}
           >
             →
-          </button>
+          </button>}
           <div className="ml-3 rounded-2xl border px-4 py-2 text-[0.85rem]" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-bg)', color: 'var(--win-text-secondary)' }}>
-            This PC › Projects › {activeCategory === 'all' ? 'All' : activeCategory}
+            This PC › Projects › {projectId ? detailProject?.title || 'Loading project' : activeCategory === 'all' ? 'All' : activeCategory}
           </div>
         </div>
 
-        <div className="flex flex-1 items-center justify-end gap-3">
+        {!projectId && <div className="flex flex-1 items-center justify-end gap-3">
           <div className="relative flex-1 max-w-sm">
             <input
               type="search"
@@ -491,7 +470,7 @@ function Projects() {
               </button>
             ))}
           </div>
-        </div>
+        </div>}
       </div>
 
       <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
@@ -542,7 +521,159 @@ function Projects() {
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden p-3 md:p-5">
-          <div className="flex-1 overflow-y-auto lg:overflow-hidden rounded-[24px] border p-4 shadow-inner shadow-black/10" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-bg)' }}>
+          {projectId ? (
+            <div className="flex-1 min-h-0 overflow-y-auto rounded-[24px] border p-4 shadow-inner shadow-black/10 md:p-6" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-bg)' }}>
+              {detailLoading ? (
+                <div className="flex h-full items-center justify-center">
+                  <Spinner size="xl" />
+                </div>
+              ) : detailError ? (
+                <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+                  <p style={{ color: 'var(--win-text-secondary)' }}>{detailError}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProjectLoadResult(null)
+                      setDetailRetryCount((count) => count + 1)
+                    }}
+                    className="rounded-3xl border bg-win-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-win-accent/90"
+                    style={{ borderColor: 'var(--win-border)' }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : !detailProject ? (
+                <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+                  <h1 className="text-xl font-semibold">Project not found</h1>
+                  <p style={{ color: 'var(--win-text-secondary)' }}>This project may have been removed.</p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/app/projects')}
+                    className="rounded-3xl border px-4 py-2 text-sm transition"
+                    style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-button-hover)' }}
+                  >
+                    Back to projects
+                  </button>
+                </div>
+              ) : (
+                <article className="mx-auto max-w-4xl space-y-6">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/app/projects')}
+                    className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm transition hover:bg-[var(--win-button-hover)]"
+                    style={{ color: 'var(--win-text-secondary)' }}
+                  >
+                    ← All projects
+                  </button>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge color="info">{detailProject.category}</Badge>
+                      <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-medium ${STATUS_COLOR_MAP[detailProject.status]}`}>
+                        {detailProject.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleAction('edit')}
+                        title="Edit Project"
+                        className="rounded-full p-2 transition hover:bg-[var(--win-button-active)]"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAction('delete')}
+                        title="Delete Project"
+                        className="rounded-full p-2 text-red-500 transition hover:bg-red-500/20"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+
+                  {detailProject.thumbnail ? (
+                    <img
+                      src={detailProject.thumbnail}
+                      alt={`${detailProject.title} preview`}
+                      className="max-h-[360px] w-full rounded-[28px] border object-cover"
+                      style={{ borderColor: 'var(--win-border)' }}
+                    />
+                  ) : (
+                    <div
+                      className="flex h-48 items-center justify-center rounded-[28px] border text-5xl"
+                      style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-button-hover)' }}
+                    >
+                      📁
+                    </div>
+                  )}
+
+                  <div>
+                    <h1 className="text-3xl font-semibold">{detailProject.title}</h1>
+                    {detailProject.description && (
+                      <p className="mt-3 text-base" style={{ color: 'var(--win-text-secondary)' }}>
+                        {detailProject.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {detailProject.longDescription && (
+                    <section className="space-y-2">
+                      <h2 className="text-sm font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--win-text-secondary)' }}>
+                        About this project
+                      </h2>
+                      <p className="whitespace-pre-line text-sm leading-7">{detailProject.longDescription}</p>
+                    </section>
+                  )}
+
+                  {detailProject.techStack.length > 0 && (
+                    <section>
+                      <h2 className="text-sm font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--win-text-secondary)' }}>
+                        Tech stack
+                      </h2>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {detailProject.techStack.map((tech) => (
+                          <Badge key={tech} color="light" className="rounded-full text-[0.72rem]" style={{ backgroundColor: 'var(--win-button-hover)', color: 'var(--win-text)' }}>
+                            {tech}
+                          </Badge>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  <div className="flex flex-wrap gap-3 border-t pt-5" style={{ borderColor: 'var(--win-border)' }}>
+                    <span className="mr-auto self-center text-sm" style={{ color: 'var(--win-text-secondary)' }}>
+                      Created {formatDate(detailProject.createdAt)}
+                    </span>
+                    {detailProject.githubUrl && (
+                      <a
+                        href={detailProject.githubUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-3xl border bg-win-accent px-4 py-3 text-center text-sm font-medium text-white transition hover:bg-win-accent/90"
+                        style={{ borderColor: 'var(--win-border)' }}
+                      >
+                        View on GitHub
+                      </a>
+                    )}
+                    {detailProject.liveUrl && (
+                      <a
+                        href={detailProject.liveUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-3xl border px-4 py-3 text-center text-sm font-medium transition hover:bg-[var(--win-button-hover)]"
+                        style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-bg)', color: 'var(--win-text)' }}
+                      >
+                        Live demo
+                      </a>
+                    )}
+                  </div>
+                </article>
+              )}
+            </div>
+          ) : (
+          <div className="flex-1 overflow-y-auto rounded-[24px] border p-4 shadow-inner shadow-black/10" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-bg)' }}>
             {loading ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {skeletonCards.map((index) => (
@@ -586,8 +717,7 @@ function Projects() {
                 <p className="mt-2 text-sm">Try a different search term or category.</p>
               </div>
             ) : (
-              <div className="flex flex-col lg:flex-row h-full min-h-0 gap-4 lg:overflow-hidden">
-                <section className="flex-1 min-w-0 lg:overflow-hidden">
+                <section className="min-w-0">
                   <div className="mb-4 flex items-center justify-between text-sm" style={{ color: 'var(--win-text-secondary)' }}>
                     <span>{visibleProjects.length} projects</span>
                     <span className="uppercase tracking-[0.2em]">{viewMode === VIEW_MODES.grid ? 'Grid View' : 'List View'}</span>
@@ -604,32 +734,24 @@ function Projects() {
                       }}
                     >
                       {visibleProjects.map((project) => {
-                        const isSelected = selectedProject?.id === project.id
                         return (
                           <motion.button
                             type="button"
                             key={project.id}
-                            onClick={() => handleSelectProject(project)}
-                            onDoubleClick={() => handleOpenDetail(project)}
+                            onClick={() => handleOpenDetail(project)}
                             layout
                             whileHover={{ y: -2 }}
                             className="group flex h-52 w-full flex-col justify-between overflow-hidden rounded-[28px] border p-4 text-left transition"
                             style={{
-                              borderColor: isSelected ? 'var(--win-accent)' : 'var(--win-border)',
-                              backgroundColor: isSelected ? 'var(--win-button-active)' : 'transparent',
+                              borderColor: 'var(--win-border)',
+                              backgroundColor: 'transparent',
                               color: 'var(--win-text)',
                             }}
                             onMouseEnter={(e) => {
-                              if (!isSelected) {
-                                e.currentTarget.style.backgroundColor = 'var(--win-button-hover)'
-                                e.currentTarget.style.borderColor = 'var(--win-border)'
-                              }
+                              e.currentTarget.style.backgroundColor = 'var(--win-button-hover)'
                             }}
                             onMouseLeave={(e) => {
-                              if (!isSelected) {
-                                e.currentTarget.style.backgroundColor = 'transparent'
-                                e.currentTarget.style.borderColor = 'var(--win-border)'
-                              }
+                              e.currentTarget.style.backgroundColor = 'transparent'
                             }}
                           >
                             <div>
@@ -677,15 +799,13 @@ function Projects() {
                         </thead>
                         <tbody style={{ color: 'var(--win-text)' }}>
                           {visibleProjects.map((project, index) => {
-                            const active = selectedProject?.id === project.id
                             return (
                               <tr
                                 key={project.id}
-                                onClick={() => handleSelectProject(project)}
-                                onDoubleClick={() => handleOpenDetail(project)}
+                                onClick={() => handleOpenDetail(project)}
                                 className="cursor-pointer transition"
                                 style={{
-                                  backgroundColor: active ? 'var(--win-button-active)' : (index % 2 === 0 ? 'var(--win-button-hover)' : 'transparent'),
+                                  backgroundColor: index % 2 === 0 ? 'var(--win-button-hover)' : 'transparent',
                                 }}
                               >
                                 <td className="px-4 py-4">{project.title}</td>
@@ -704,118 +824,15 @@ function Projects() {
                     </div>
                   )}
                 </section>
-
-                <aside className="w-full lg:w-[280px] lg:min-w-[280px] shrink-0 overflow-hidden rounded-[28px] border p-5 text-sm" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-button-hover)', color: 'var(--win-text)' }}>
-                  <AnimatePresence mode="wait">
-                    {detailProject ? (
-                      <motion.div
-                        key={detailProject.id}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.25 }}
-                        className="space-y-5"
-                      >
-                        <div className="overflow-hidden rounded-3xl border" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-bg)' }}>
-                          <div className="h-40 bg-cover bg-center" style={{ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.6)), url('${detailProject.thumbnail}')` }} />
-                          <div className="space-y-3 p-4">
-                            <div className="flex items-center justify-between gap-2">
-                              <div>
-                                <p className="text-xs uppercase tracking-[0.22em]" style={{ color: 'var(--win-text-secondary)' }}>Preview</p>
-                                <h2 className="mt-2 text-2xl font-semibold">{detailProject.title}</h2>
-                              </div>
-                              <div className="flex flex-col items-end gap-2 shrink-0">
-                                <Badge color="info">{detailProject.category}</Badge>
-                                <div className="flex items-center gap-1">
-                                  <button onClick={() => handleAction('edit')} title="Edit Project" className="p-1.5 rounded-full transition text-sm hover:bg-white/10 dark:hover:bg-white/10" style={{ backgroundColor: 'var(--win-button-hover)' }}>✏️</button>
-                                  <button onClick={() => handleAction('delete')} title="Delete Project" className="p-1.5 rounded-full hover:bg-red-500/20 text-red-500 transition text-sm">🗑️</button>
-                                </div>
-                              </div>
-                            </div>
-                            <p className="text-sm leading-6" style={{ color: 'var(--win-text)' }}>{detailProject.longDescription || detailProject.description}</p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="text-sm uppercase tracking-[0.22em]" style={{ color: 'var(--win-text-secondary)' }}>Tech stack</h3>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {detailProject.techStack.map((tech) => (
-                                <Badge key={tech} color="light" className="rounded-full text-[0.72rem]" style={{ backgroundColor: 'var(--win-button-hover)', color: 'var(--win-text)' }}>
-                                  {tech}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="grid gap-3 text-[0.85rem]" style={{ color: 'var(--win-text)' }}>
-                            <div className="flex items-center justify-between rounded-3xl px-4 py-3" style={{ backgroundColor: 'var(--win-button-active)' }}>
-                              <span style={{ color: 'var(--win-text-secondary)' }}>Status</span>
-                              <span className="font-medium">{detailProject.status}</span>
-                            </div>
-                            <div className="flex items-center justify-between rounded-3xl px-4 py-3" style={{ backgroundColor: 'var(--win-button-active)' }}>
-                              <span style={{ color: 'var(--win-text-secondary)' }}>Created</span>
-                              <span>{formatDate(detailProject.createdAt)}</span>
-                            </div>
-                          </div>
-
-                          <div className="grid gap-3">
-                            <a
-                              href={detailProject.githubUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="rounded-3xl border bg-win-accent px-4 py-3 text-center text-sm font-medium text-white transition hover:bg-win-accent/90"
-                              style={{ borderColor: 'var(--win-border)' }}
-                            >
-                              View on GitHub
-                            </a>
-                            <a
-                              href={detailProject.liveUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="rounded-3xl border px-4 py-3 text-center text-sm font-medium transition"
-                              style={{
-                                borderColor: 'var(--win-border)',
-                                backgroundColor: 'var(--win-bg)',
-                                color: 'var(--win-text)',
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--win-button-hover)'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--win-bg)'}
-                            >
-                              Live demo
-                            </a>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="placeholder"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.25 }}
-                        className="flex h-full flex-col items-center justify-center gap-4 text-center"
-                        style={{ color: 'var(--win-text-secondary)' }}
-                      >
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full border text-lg" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-bg)' }}>
-                          ℹ️
-                        </div>
-                        <p className="max-w-[220px] text-sm">
-                          Select a project to preview its details here.
-                        </p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </aside>
-              </div>
             )}
           </div>
+          )}
         </main>
       </div>
 
       <div className="flex items-center justify-between border-t px-5 py-3 text-sm" style={{ borderColor: 'var(--win-border)', backgroundColor: 'var(--win-button-hover)', color: 'var(--win-text-secondary)' }}>
         <span>{visibleProjects.length} items</span>
-        <span>{selectedCount} selected</span>
+        <span>{projectId ? 'Project details' : 'Select a project to view details'}</span>
       </div>
     </div>
   )

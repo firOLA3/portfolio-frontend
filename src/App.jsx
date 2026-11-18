@@ -20,21 +20,15 @@ function App() {
   // Sync route changes with window focus
   useEffect(() => {
     const pathname = location.pathname
-    // Extract appId from pathname like /app/about -> about
-    if (pathname.startsWith('/app/')) {
-      const appId = pathname.substring(5) // remove '/app/'
-      // Use label from state if available (when navigating via desktop icon), otherwise fallback to capitalized appId
+    const appId = pathname.match(/^\/app\/([^/]+)/)?.[1]
+    if (appId) {
       const label = location.state?.label || appId.charAt(0).toUpperCase() + appId.slice(1)
-      // Open the window if not already open
-      openWindow(appId, label)
-      // Focus this window
-      focusWindow(appId)
+      const windowId = openWindow(appId, label)
+      focusWindow(windowId)
     } else if (pathname === '/') {
-      // Default route: no specific app focused, but we can show desktop
-      // Optionally, we could focus nothing or show a default app
-      // For now, do nothing special
+      return
     }
-  }, [location.pathname, openWindow, focusWindow])
+  }, [location.pathname, location.state, openWindow, focusWindow])
 
   // When window focus changes via user interaction (e.g., clicking taskbar), update URL
   // We'll use a ref to ignore updates that originate from URL changes to prevent loops
@@ -48,13 +42,15 @@ function App() {
       }
       const activeWindow = state.windows.find(w => w.id === state.activeWindowId)
       const appId = activeWindow?.appId
+      const currentAppId = location.pathname.match(/^\/app\/([^/]+)/)?.[1]
       try {
         isUpdatingFromUrl.current = true
         if (appId) {
-          // Update URL to /app/{appId}
-          navigate(`/app/${appId}`, { replace: false })
+          const nextPath = currentAppId === appId ? location.pathname : `/app/${appId}`
+          if (nextPath !== location.pathname) {
+            navigate(nextPath, { replace: false })
+          }
         } else {
-          // No active window, go to root
           navigate('/', { replace: false })
         }
       } finally {
@@ -62,7 +58,7 @@ function App() {
       }
     })
     return unsubscribe
-  }, [navigate])
+  }, [location.pathname, navigate])
 
   // When a window is closed, if it was the active window, we need to focus another window
   // We'll handle this in the window store or here? Let's do in store: when closing a window, if it's active, focus another.
